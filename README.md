@@ -39,7 +39,7 @@ No field name. No JSON path. No indication of where in a 500-line API response t
 
 ```yaml
 dependencies:
-  json_lens: ^0.0.1
+  json_lens: ^0.0.2
 ```
 
 ```dart
