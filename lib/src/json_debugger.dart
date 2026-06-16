@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 /// A utility that brings Kotlin-like precision to JSON deserialization errors in Dart.
 ///
@@ -38,11 +39,14 @@ class JsonDebugger {
   /// [fromJson] - Your model's fromJson factory.
   /// [schema] - Optional type schema map for proactive validation.
   /// [tag] - Optional tag for log identification (e.g., 'HotelResponse').
+  /// [logOnError] - If true (default), prints the formatted error to the
+  ///   console before throwing. Set to false to throw silently.
   static T decode<T>({
     required String jsonString,
     required T Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic>? schema,
     String? tag,
+    bool logOnError = true,
   }) {
     final dynamic rawJson;
 
@@ -51,28 +55,28 @@ class JsonDebugger {
       rawJson = json.decode(jsonString);
     } catch (e) {
       final offset = _extractOffset(e.toString());
-      throw JsonDebugError(
+      _throwAndLog(JsonDebugError(
         message: 'Invalid JSON syntax',
         path: r'$',
         offset: offset,
         detail: e.toString(),
         tag: tag,
-      );
+      ), logOnError);
     }
 
     if (rawJson is! Map<String, dynamic>) {
-      throw JsonDebugError(
+      _throwAndLog(JsonDebugError(
         message: 'Expected a JSON object at root',
         path: r'$',
         expected: 'Map<String, dynamic>',
         actual: '${rawJson.runtimeType}',
         tag: tag,
-      );
+      ), logOnError);
     }
 
     // Step 2: Validate against schema if provided
     if (schema != null) {
-      _validateSchema(rawJson, schema, r'$', tag);
+      _validateSchema(rawJson, schema, r'$', tag, logOnError);
     }
 
     // Step 3: Attempt deserialization with enhanced error catching
@@ -83,16 +87,16 @@ class JsonDebugger {
       // do a deep scan to find the culprit
       final mismatch = _deepScan(rawJson, r'$');
       if (mismatch != null) {
-        throw mismatch;
+        _throwAndLog(mismatch, logOnError);
       }
 
       // Fallback: wrap the original error with context
-      throw JsonDebugError(
+      _throwAndLog(JsonDebugError(
         message: 'Deserialization failed',
         path: r'$',
         detail: e.toString(),
         tag: tag,
-      );
+      ), logOnError);
     }
   }
 
@@ -123,10 +127,13 @@ class JsonDebugger {
   ///   tag: 'HotelResponse',
   /// );
   /// ```
+  /// [logOnError] - If true (default), prints the formatted error to the
+  ///   console before throwing. Set to false to throw silently.
   static T wrap<T>({
     required T Function() deserialize,
     required Map<String, dynamic> json,
     String? tag,
+    bool logOnError = true,
   }) {
     try {
       return deserialize();
@@ -138,7 +145,7 @@ class JsonDebugger {
       final findings = <String>[];
       _scanForTypeMismatch(json, r'$', typeInfo, findings);
 
-      throw JsonDebugError(
+      _throwAndLog(JsonDebugError(
         message: 'Type mismatch during deserialization',
         path: findings.isNotEmpty ? findings.first : r'$',
         detail: errorStr,
@@ -146,18 +153,26 @@ class JsonDebugger {
         suggestions: findings.length > 1
             ? ['Multiple possible locations found:', ...findings]
             : null,
-      );
+      ), logOnError);
     } catch (e) {
       final mismatch = _deepScan(json, r'$');
-      if (mismatch != null) throw mismatch;
+      if (mismatch != null) _throwAndLog(mismatch, logOnError);
 
-      throw JsonDebugError(
+      _throwAndLog(JsonDebugError(
         message: 'Deserialization failed',
         path: r'$',
         detail: e.toString(),
         tag: tag,
-      );
+      ), logOnError);
     }
+  }
+
+  /// Logs a [JsonDebugError] to the console if [logOnError] is true.
+  static Never _throwAndLog(JsonDebugError error, bool logOnError) {
+    if (logOnError) {
+      developer.log(error.toString(), name: 'json_lens');
+    }
+    throw error;
   }
 
   // ─── Schema Validation ───────────────────────────────────────────
@@ -167,11 +182,12 @@ class JsonDebugger {
     dynamic schema,
     String path,
     String? tag,
+    bool logOnError,
   ) {
     final errors = <JsonDebugError>[];
     _collectSchemaErrors(json, schema, path, tag, errors);
     if (errors.isNotEmpty) {
-      throw errors.first;
+      _throwAndLog(errors.first, logOnError);
     }
   }
 
