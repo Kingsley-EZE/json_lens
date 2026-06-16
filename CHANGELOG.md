@@ -1,3 +1,8 @@
+## 0.0.2
+
+- Added `logOnError` parameter to `JsonDebugger.wrap()` and `JsonDebugger.decode()` (defaults to `true`).
+- Errors are now automatically logged to the console via `dart:developer` before throwing, so they're visible even when caught upstream.
+
 ## 0.0.1
 
 - Initial release.

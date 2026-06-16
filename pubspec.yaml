@@ -3,7 +3,7 @@ description: >-
   Kotlin-like precision for JSON deserialization errors in Dart.
   Get exact JSON paths, expected vs actual types, and values instead of
   the unhelpful 'type int is not a subtype of type String'.
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/Kingsley-EZE/json_lens
 repository: https://github.com/Kingsley-EZE/json_lens
 issue_tracker: https://github.com/Kingsley-EZE/json_lens/issues
