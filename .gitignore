@@ -1,0 +1,7 @@
+.dart_tool/
+.idea/
+.packages
+build/
+pubspec.lock
+doc/api/
+*.iml
